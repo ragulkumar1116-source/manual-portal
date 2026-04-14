@@ -1,0 +1,19 @@
+@import 'dashboard.css';
+
+.logs-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.filters { background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; gap: 10px; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.filter-input { padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; }
+.logs-table-container { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+.logs-table { width: 100%; border-collapse: collapse; }
+.logs-table th { background: #1e293b; color: white; padding: 12px; text-align: left; font-size: 14px; font-weight: 600; }
+.logs-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+.logs-table tr:hover { background: #f9fafb; }
+.badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+.badge-view { background: #dbeafe; color: #1e40af; }
+.badge-download { background: #d1fae5; color: #065f46; }
+.badge-login { background: #f3f4f6; color: #374151; }
+.user-cell { display: flex; flex-direction: column; }
+.user-cell strong { color: #111827; }
+.user-cell small { color: #6b7280; font-size: 12px; }
+.timestamp { font-family: monospace; color: #6b7280; font-size: 13px; }
+.mono { font-family: monospace; font-size: 13px; color: #6b7280; }
