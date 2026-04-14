@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secure Download</title>
+  <link rel="stylesheet" href="css/main.css">
+  <style>
+    .download-container { max-width: 600px; margin: 2rem auto; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
+    .download-header { background: #1e3a8a; color: white; padding: 2rem; text-align: center; }
+    .download-body { padding: 2rem; }
+    .file-preview { background: #f8fafc; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem; }
+    .security-warning { background: #fef3c7; border: 1px solid #fbbf24; color: #92400e; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; font-size: 14px; }
+    .progress-bar { width: 100%; height: 4px; background: #e5e7eb; border-radius: 2px; margin-top: 1rem; overflow: hidden; display: none; }
+    .progress-fill { height: 100%; background: #059669; width: 0%; transition: width 0.3s; }
+    .form-group { margin-bottom: 1.5rem; }
+    .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-family: inherit; }
+    .checkbox-group { display: flex; align-items: start; gap: 10px; margin: 20px 0; }
+  </style>
+</head>
+<body style="background: #f1f5f9;">
+  <div class="download-container">
+    <div class="download-header">
+      <h2>🔒 Secure Download Center</h2>
+      <p style="margin: 0; opacity: 0.9;">All downloads are tracked and watermarked</p>
+    </div>
+    
+    <div class="download-body">
+      <div class="file-preview">
+        <div style="font-size: 48px; margin-bottom: 0.5rem;">📄</div>
+        <h3 id="fileName">Manual.pdf</h3>
+        <p style="color: #6b7280; margin: 0;" id="fileSize">Size: --</p>
+      </div>
+
+      <div class="security-warning">
+        <strong>⚠️ Important:</strong> This file will be watermarked with your user ID (Email + Phone) and timestamp.
+      </div>
+
+      <form id="downloadForm">
+        <input type="hidden" id="manualId">
+        
+        <div class="form-group">
+          <label>Download Purpose *</label>
+          <select id="reason" required>
+            <option value="">Select reason...</option>
+            <option value="maintenance">On-site Maintenance</option>
+            <option value="emergency">Emergency Repair</option>
+            <option value="installation">New Installation</option>
+            <option value="inspection">Safety Inspection</option>
+            <option value="training">Training Reference</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Project/Site Location *</label>
+          <input type="text" id="siteLocation" required placeholder="e.g., Tower A - Floor 12">
+        </div>
+
+        <div class="form-group">
+          <label>Additional Notes</label>
+          <textarea id="notes" rows="3"></textarea>
+        </div>
+
+        <div class="checkbox-group">
+          <input type="checkbox" id="confirm" required>
+          <label for="confirm" style="margin: 0; font-weight: normal; font-size: 14px;">I confirm I am authorized to download this document.</label>
+        </div>
+
+        <button type="submit" class="btn-primary" style="width: 100%;" id="downloadBtn">Confirm & Download</button>
+        
+        <div class="progress-bar" id="progressBar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </form>
+
+      <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #6b7280;">
+        <p>Log ID: <span id="logId" style="font-family: monospace; color: #1e40af;">Pending...</span></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { trackDownload } from './js/tracker.js'
+    import { getDownloadUrl } from './js/api.js'
+    
+    const urlParams = new URLSearchParams(window.location.search)
+    const manualId = urlParams.get('id')
+    const manualTitle = urlParams.get('title') || 'Unknown Manual'
+    
+    document.getElementById('manualId').value = manualId
+    document.getElementById('fileName').textContent = manualTitle
+    
+    document.getElementById('downloadForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      
+      const btn = document.getElementById('downloadBtn')
+      btn.disabled = true
+      btn.textContent = 'Processing...'
+      
+      document.getElementById('progressBar').style.display = 'block'
+      document.getElementById('progressFill').style.width = '50%'
+      
+      const details = {
+        reason: document.getElementById('reason').value,
+        site: document.getElementById('siteLocation').value,
+        notes: document.getElementById('notes').value
+      }
+      
+      try {
+        const logId = await trackDownload(manualId, manualTitle, details)
+        document.getElementById('logId').textContent = logId
+        
+        // Get actual download URL
+        const url = await getDownloadUrl(manualId)
+        if (url) {
+          document.getElementById('progressFill').style.width = '100%'
+          setTimeout(() => {
+            window.open(url, '_blank')
+            alert('Download started! Check your downloads folder.')
+            window.location.href = 'manuals.html'
+          }, 1000)
+        }
+      } catch (error) {
+        alert('Error: ' + error.message)
+        btn.disabled = false
+        btn.textContent = 'Confirm & Download'
+        document.getElementById('progressBar').style.display = 'none'
+      }
+    })
+  </script>
+</body>
+</html>

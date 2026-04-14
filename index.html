@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Site Engineer Portal - Login</title>
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body class="auth-page">
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="logo-section">
+        <div class="logo-icon">🏗️</div>
+        <h1>ENGINEER PORTAL</h1>
+        <p>Technical Documentation Access System</p>
+      </div>
+
+      <form id="loginForm" class="auth-form">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" required placeholder="engineer@company.com">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div style="position: relative;">
+            <input type="password" id="password" required placeholder="••••••••">
+            <span class="toggle-password" onclick="togglePassword()">👁️</span>
+          </div>
+        </div>
+
+        <div class="form-options">
+          <label class="remember-me">
+            <input type="checkbox" id="remember"> Remember me
+          </label>
+          <a href="#" class="forgot-link" onclick="alert('Contact admin to reset password')">Forgot Password?</a>
+        </div>
+
+        <button type="submit" class="btn-primary" id="loginBtn">
+          <span class="btn-text">Secure Login</span>
+          <span class="btn-loader" style="display: none;">⏳</span>
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        <p>New Engineer? <a href="register.html">Register Here</a></p>
+        <div class="security-badge">
+          🔒 Powered by Supabase • SSL Encrypted
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { loginUser } from './js/auth.js'
+    
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const btn = document.getElementById('loginBtn')
+      const loader = btn.querySelector('.btn-loader')
+      const text = btn.querySelector('.btn-text')
+      
+      btn.disabled = true
+      text.style.display = 'none'
+      loader.style.display = 'inline'
+      
+      const result = await loginUser(
+        document.getElementById('email').value,
+        document.getElementById('password').value
+      )
+      
+      if (result.success) {
+        window.location.href = 'dashboard.html'
+      } else {
+        alert(result.error)
+        btn.disabled = false
+        text.style.display = 'inline'
+        loader.style.display = 'none'
+      }
+    })
+    
+    window.togglePassword = () => {
+      const input = document.getElementById('password')
+      input.type = input.type === 'password' ? 'text' : 'password'
+    }
+  </script>
+</body>
+</html>

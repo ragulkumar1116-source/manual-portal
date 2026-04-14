@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Manual</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        .pdf-container {
+            background: #f3f4f6;
+            padding: 2rem;
+            min-height: calc(100vh - 70px);
+        }
+        .pdf-viewer {
+            background: white;
+            width: 100%;
+            height: 80vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .manual-info-bar {
+            background: white;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo">📄</span>
+            <h2>Viewing Manual</h2>
+        </div>
+        <div class="nav-links">
+            <a href="manuals.html">← Back to Library</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="manual-info-bar">
+        <div>
+            <h3 id="manualTitle">Loading...</h3>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">🔒 Viewing activity is being logged</p>
+        </div>
+        <button onclick="downloadCurrent()" class="btn-primary" style="padding: 8px 16px;">
+            Download PDF
+        </button>
+    </div>
+
+    <div class="pdf-container">
+        <iframe id="pdfViewer" class="pdf-viewer" frameborder="0"></iframe>
+    </div>
+
+    <script type="module" src="js/firebase.js"></script>
+    <script type="module" src="js/auth.js"></script>
+    <script type="module" src="js/api.js"></script>
+    <script type="module" src="js/tracker.js"></script>
+    <script type="module">
+        import { checkAuth, logout } from './js/auth.js';
+        import { getManual, getDownloadURL } from './js/api.js';
+        import { trackManualView } from './js/tracker.js';
+        
+        window.logout = logout;
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const manualId = urlParams.get('id');
+        
+        async function loadManual() {
+            await checkAuth();
+            const manual = await getManual(manualId);
+            document.getElementById('manualTitle').textContent = manual.title;
+            
+            // Track view
+            await trackManualView(manualId, manual.title, { category: manual.category });
+            
+            // Load PDF (in real app, would use Firebase Storage URL)
+            document.getElementById('pdfViewer').src = manual.fileURL || 'https://pdfobject.com/pdf/sample.pdf';
+        }
+        
+        window.downloadCurrent = () => {
+            window.location.href = `download-center.html?id=${manualId}`;
+        };
+        
+        loadManual();
+    </script>
+</body>
+</html>

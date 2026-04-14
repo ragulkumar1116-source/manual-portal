@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual Library</title>
+  <link rel="stylesheet" href="css/dashboard.css">
+  <style>
+    .manuals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+    .manual-card { background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 2px solid transparent; transition: all 0.3s; }
+    .manual-card:hover { border-color: #3b82f6; transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+    .manual-header { display: flex; justify-content: space-between; margin-bottom: 1rem; }
+    .badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-electrical { background: #dbeafe; color: #1e40af; }
+    .badge-mechanical { background: #fce7f3; color: #be185d; }
+    .badge-hvac { background: #d1fae5; color: #065f46; }
+    .manual-actions { display: flex; gap: 10px; margin-top: 1rem; }
+    .btn-view { background: #eff6ff; color: #1e40af; border: none; padding: 8px; border-radius: 6px; cursor: pointer; flex: 1; }
+    .btn-download { background: #1e40af; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; flex: 1; }
+    .search-bar { background: white; padding: 1rem; border-radius: 8px; display: flex; gap: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .search-input { flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="logo">🏗️</span>
+      <h2>ENGINEER PORTAL</h2>
+    </div>
+    <div class="nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="manuals.html" class="active">Manuals</a>
+      <a href="logs.html">Activity</a>
+      <a href="#" onclick="logout()">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="search-bar">
+      <input type="text" class="search-input" id="searchInput" placeholder="Search manuals...">
+      <select id="categoryFilter">
+        <option value="">All Categories</option>
+        <option value="electrical">Electrical</option>
+        <option value="mechanical">Mechanical</option>
+        <option value="hvac">HVAC</option>
+      </select>
+      <button onclick="filterManuals()" class="btn-primary">Search</button>
+    </div>
+
+    <div class="alert" style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+      <strong>📋 Security Notice:</strong> All manual views and downloads are logged with your email, phone number, timestamp, and IP address.
+    </div>
+
+    <div class="manuals-grid" id="manualsContainer">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <script type="module">
+    import { checkAuth, logout } from './js/auth.js'
+    import { getManuals } from './js/api.js'
+    import { trackManualView } from './js/tracker.js'
+    
+    window.logout = logout
+    
+    let allManuals = []
+    
+    async function loadManuals() {
+      await checkAuth()
+      const result = await getManuals()
+      allManuals = result.manuals
+      renderManuals(allManuals)
+    }
+    
+    function renderManuals(manuals) {
+      const container = document.getElementById('manualsContainer')
+      if (manuals.length === 0) {
+        container.innerHTML = '<div class="empty">No manuals found</div>'
+        return
+      }
+      
+      container.innerHTML = manuals.map(m => `
+        <div class="manual-card">
+          <div class="manual-header">
+            <span class="badge badge-${m.category}">${m.category.toUpperCase()}</span>
+            <span style="color: #6b7280; font-size: 12px;">${m.file_size || 'PDF'}</span>
+          </div>
+          <h3 style="margin-bottom: 0.5rem; color: #111827;">${m.title}</h3>
+          <p style="color: #6b7280; font-size: 14px; margin-bottom: 1rem;">
+            ${m.description || 'Technical manual'}<br>
+            <small>Version: ${m.version} | Updated: ${new Date(m.updated_at).toLocaleDateString()}</small>
+          </p>
+          <div class="manual-actions">
+            <button class="btn-view" onclick="viewManual('${m.id}', '${m.title}')">View Online</button>
+            <button class="btn-download" onclick="downloadManual('${m.id}', '${m.title}')">Download</button>
+          </div>
+        </div>
+      `).join('')
+    }
+    
+    window.viewManual = async (id, title) => {
+      await trackManualView(id, title)
+      window.location.href = `manual-view.html?id=${id}`
+    }
+    
+    window.downloadManual = (id, title) => {
+      window.location.href = `download-center.html?id=${id}&title=${encodeURIComponent(title)}`
+    }
+    
+    window.filterManuals = async () => {
+      const search = document.getElementById('searchInput').value
+      const category = document.getElementById('categoryFilter').value
+      
+      const result = await getManuals({ search, category })
+      renderManuals(result.manuals)
+    }
+    
+    loadManuals()
+  </script>
+</body>
+</html>

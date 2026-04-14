@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activity Logs</title>
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/logs.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="logo">📊</span>
+      <h2>ACTIVITY MONITOR</h2>
+    </div>
+    <div class="nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="logs.html" class="active">Logs</a>
+      <a href="#" onclick="logout()">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="logs-header">
+      <h1>Access Logs & Audit Trail</h1>
+      <button onclick="exportCSV()" class="btn-secondary">Export CSV</button>
+    </div>
+
+    <div class="filters">
+      <input type="date" id="dateFrom" class="filter-input">
+      <input type="date" id="dateTo" class="filter-input">
+      <select id="actionFilter" class="filter-input">
+        <option value="">All Actions</option>
+        <option value="view">View</option>
+        <option value="download">Download</option>
+        <option value="login">Login</option>
+      </select>
+      <button onclick="loadLogs()" class="btn-primary">Refresh</button>
+    </div>
+
+    <div class="logs-table-container">
+      <table class="logs-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>User Details</th>
+            <th>Action</th>
+            <th>Document</th>
+            <th>IP Address</th>
+            <th>Site/Reason</th>
+          </tr>
+        </thead>
+        <tbody id="logsTableBody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script type="module">
+    import { checkAuth, logout } from './js/auth.js'
+    import { getActivityLogs } from './js/api.js'
+    
+    window.logout = logout
+    
+    async function loadLogs() {
+      await checkAuth()
+      const logs = await getActivityLogs()
+      renderLogs(logs)
+    }
+    
+    function renderLogs(logs) {
+      const tbody = document.getElementById('logsTableBody')
+      if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No logs found</td></tr>'
+        return
+      }
+      
+      tbody.innerHTML = logs.map(log => `
+        <tr>
+          <td class="timestamp">${new Date(log.timestamp).toLocaleString()}</td>
+          <td>
+            <div class="user-cell">
+              <strong>${log.user_name || 'Unknown'}</strong>
+              <small>${log.user_email}</small>
+              <small>${log.user_phone || ''}</small>
+            </div>
+          </td>
+          <td><span class="badge badge-${log.action_type}">${log.action_type.toUpperCase()}</span></td>
+          <td>${log.manual_title || '-'}</td>
+          <td class="mono">${log.ip_address}</td>
+          <td>${log.project_site || log.download_reason || '-'}</td>
+        </tr>
+      `).join('')
+    }
+    
+    window.exportCSV = () => {
+      alert('Export feature would generate CSV here')
+    }
+    
+    loadLogs()
+  </script>
+</body>
+</html>

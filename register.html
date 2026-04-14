@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - Engineer Portal</title>
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body class="auth-page">
+  <div class="auth-container">
+    <div class="auth-card" style="max-width: 600px;">
+      <div class="logo-section">
+        <div class="logo-icon">🔧</div>
+        <h1>Engineer Registration</h1>
+        <p>Create your secure access account</p>
+      </div>
+
+      <form id="registerForm" class="auth-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="fullName" required placeholder="John Smith">
+          </div>
+          <div class="form-group">
+            <label>Employee ID</label>
+            <input type="text" id="employeeId" placeholder="EMP-2024-001">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email Address *</label>
+            <input type="email" id="email" required placeholder="john@company.com">
+          </div>
+          <div class="form-group">
+            <label>Phone Number *</label>
+            <input type="tel" id="phone" required placeholder="+1 234 567 8900">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Department *</label>
+          <select id="department" required>
+            <option value="">Select Department</option>
+            <option value="electrical">Electrical Systems</option>
+            <option value="mechanical">Mechanical</option>
+            <option value="hvac">HVAC</option>
+            <option value="civil">Civil Engineering</option>
+            <option value="safety">Safety & Compliance</option>
+            <option value="lift">Elevators & Lifts</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Password *</label>
+            <input type="password" id="password" required minlength="8" placeholder="Min 8 characters">
+          </div>
+          <div class="form-group">
+            <label>Confirm Password *</label>
+            <input type="password" id="confirmPassword" required placeholder="Repeat password">
+          </div>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <input type="checkbox" id="agree" required>
+          <label for="agree">I agree that all activities including manual views and downloads will be logged with my details (name, email, phone, timestamp, IP address) for security compliance.</label>
+        </div>
+
+        <button type="submit" class="btn-primary" id="registerBtn">
+          <span class="btn-text">Create Account</span>
+          <span class="btn-loader" style="display: none;">⏳</span>
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        <p>Already registered? <a href="index.html">Login</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { registerUser } from './js/auth.js'
+    
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      
+      if (document.getElementById('password').value !== document.getElementById('confirmPassword').value) {
+        alert("Passwords do not match!")
+        return
+      }
+      
+      const btn = document.getElementById('registerBtn')
+      btn.disabled = true
+      
+      const userDetails = {
+        fullName: document.getElementById('fullName').value,
+        employeeId: document.getElementById('employeeId').value,
+        phone: document.getElementById('phone').value,
+        department: document.getElementById('department').value
+      }
+      
+      const result = await registerUser(
+        document.getElementById('email').value,
+        document.getElementById('password').value,
+        userDetails
+      )
+      
+      if (result.success) {
+        alert(result.message)
+        window.location.href = 'index.html'
+      } else {
+        alert('Error: ' + result.error)
+        btn.disabled = false
+      }
+    })
+  </script>
+</body>
+</html>

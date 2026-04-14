@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Engineer Portal</title>
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="logo">🏗️</span>
+      <h2>ENGINEER PORTAL</h2>
+    </div>
+    <div class="nav-links">
+      <a href="dashboard.html" class="active">Dashboard</a>
+      <a href="manuals.html">Manuals</a>
+      <a href="logs.html">My Activity</a>
+      <a href="profile.html">Profile</a>
+      <a href="#" onclick="logout()" class="logout">Logout</a>
+    </div>
+    <div class="user-info">
+      <span id="userDisplay">Loading...</span>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="welcome-banner">
+      <div class="welcome-text">
+        <h1>Technical Documentation Center</h1>
+        <p id="dateDisplay">Loading date...</p>
+      </div>
+      <div class="time-display" id="clock">00:00</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card blue">
+        <div class="stat-icon">📚</div>
+        <div class="stat-details">
+          <h3>Total Manuals</h3>
+          <p class="stat-number" id="totalManuals">-</p>
+          <span class="stat-change">Available</span>
+        </div>
+      </div>
+      
+      <div class="stat-card green">
+        <div class="stat-icon">⬇️</div>
+        <div class="stat-details">
+          <h3>Your Downloads</h3>
+          <p class="stat-number" id="downloadCount">-</p>
+          <span class="stat-change">This month</span>
+        </div>
+      </div>
+      
+      <div class="stat-card orange">
+        <div class="stat-icon">👁️</div>
+        <div class="stat-details">
+          <h3>Manuals Viewed</h3>
+          <p class="stat-number" id="viewCount">-</p>
+          <span class="stat-change">Recent activity</span>
+        </div>
+      </div>
+      
+      <div class="stat-card purple">
+        <div class="stat-icon">🔒</div>
+        <div class="stat-details">
+          <h3>Security Status</h3>
+          <p class="stat-number" style="font-size: 1.2rem; margin-top: 0.5rem;">ACTIVE</p>
+          <span class="stat-change">All activity logged</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="recent-activity">
+        <h3>Recent Activity Log</h3>
+        <div class="activity-list" id="activityList">
+          <div class="loading">Loading activities...</div>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <h3>Quick Actions</h3>
+        <a href="manuals.html" class="action-card">
+          <span class="action-icon">📖</span>
+          <span>Browse Manuals</span>
+        </a>
+        <a href="logs.html" class="action-card">
+          <span class="action-icon">📊</span>
+          <span>View Full Logs</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { checkAuth, logout } from './js/auth.js'
+    import { getUserStats, getRecentActivity } from './js/api.js'
+    
+    window.logout = logout
+    
+    // Clock
+    setInterval(() => {
+      document.getElementById('clock').textContent = new Date().toLocaleTimeString()
+    }, 1000)
+    
+    document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    })
+    
+    async function loadDashboard() {
+      const user = await checkAuth()
+      if (!user) return
+      
+      document.getElementById('userDisplay').textContent = user.full_name || user.email
+      
+      // Load stats
+      const stats = await getUserStats(user.id)
+      document.getElementById('downloadCount').textContent = stats.downloads
+      document.getElementById('viewCount').textContent = stats.views
+      document.getElementById('totalManuals').textContent = stats.totalManuals
+      
+      // Load recent activity
+      const activities = await getRecentActivity(user.id, 5)
+      const list = document.getElementById('activityList')
+      
+      if (activities.length === 0) {
+        list.innerHTML = '<div class="empty">No recent activity</div>'
+      } else {
+        list.innerHTML = activities.map(act => `
+          <div class="activity-item">
+            <div class="activity-icon">${act.action_type === 'download' ? '⬇️' : '👁️'}</div>
+            <div class="activity-details">
+              <div class="activity-title">${act.manual_title || 'System'}</div>
+              <div class="activity-meta">${act.action_type} • ${new Date(act.timestamp).toLocaleString()}</div>
+            </div>
+          </div>
+        `).join('')
+      }
+    }
+    
+    loadDashboard()
+  </script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        .admin-grid { display: grid; grid-template-columns: 250px 1fr; gap: 2rem; margin-top: 2rem; }
+        .sidebar { background: white; padding: 1.5rem; border-radius: 8px; height: fit-content; }
+        .sidebar-item { padding: 10px; cursor: pointer; border-radius: 4px; margin-bottom: 5px; }
+        .sidebar-item:hover, .sidebar-item.active { background: #eff6ff; color: #1e40af; }
+        .admin-content { background: white; padding: 2rem; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo">⚙️</span>
+            <h2>ADMIN PANEL</h2>
+        </div>
+        <div class="nav-links">
+            <a href="dashboard.html">User View</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="admin-grid">
+            <div class="sidebar">
+                <div class="sidebar-item active" onclick="showSection('users')">User Management</div>
+                <div class="sidebar-item" onclick="showSection('manuals')">Manuals</div>
+                <div class="sidebar-item" onclick="showSection('logs')">System Logs</div>
+                <div class="sidebar-item" onclick="showSection('stats')">Statistics</div>
+            </div>
+            <div class="admin-content" id="adminContent">
+                <h3>User Management</h3>
+                <p>Admin features would go here...</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
+    <script type="module">
+        import { logout } from './js/auth.js';
+        window.logout = logout;
+        window.showSection = (section) => {
+            document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('adminContent').innerHTML = `<h3>${section}</h3><p>Loading ${section}...</p>`;
+        };
+    </script>
+</body>
+</html>
