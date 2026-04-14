@@ -1,5 +1,8 @@
 import { supabase, getCurrentUser, getIP } from './supabase.js'
 
+// ==========================================
+// TRACK MANUAL VIEW
+// ==========================================
 export async function trackManualView(manualId, manualTitle, metadata = {}) {
   const user = await getCurrentUser()
   if (!user) return
@@ -25,14 +28,31 @@ export async function trackManualView(manualId, manualTitle, metadata = {}) {
   if (error) {
     console.error('Error tracking view:', error)
   } else {
-    // Increment user's view count
+    // Increment user view count using RPC
     await supabase.rpc('increment_user_stat', {
       user_uuid: user.id,
       stat_name: 'view_count'
     })
+    
+    // Increment manual view count (fetch + update)
+    const { data: manual } = await supabase
+      .from('manuals')
+      .select('view_count')
+      .eq('id', manualId)
+      .single()
+    
+    if (manual) {
+      await supabase
+        .from('manuals')
+        .update({ view_count: (manual.view_count || 0) + 1 })
+        .eq('id', manualId)
+    }
   }
 }
 
+// ==========================================
+// TRACK DOWNLOAD (Fixed)
+// ==========================================
 export async function trackDownload(manualId, manualTitle, details) {
   const user = await getCurrentUser()
   if (!user) throw new Error("Authentication required")
@@ -76,18 +96,52 @@ export async function trackDownload(manualId, manualTitle, details) {
       created_at: new Date().toISOString()
     })
   
-  // 3. Increment counts
+  // 3. Increment user download count using RPC
   await supabase.rpc('increment_user_stat', {
     user_uuid: user.id,
     stat_name: 'download_count'
   })
   
-  await supabase
+  // 4. Increment manual download count (fetch + update)
+  const { data: manual } = await supabase
     .from('manuals')
-    .update({ download_count: supabase.sql`download_count + 1` })
+    .select('download_count')
     .eq('id', manualId)
+    .single()
+  
+  if (manual) {
+    await supabase
+      .from('manuals')
+      .update({ download_count: (manual.download_count || 0) + 1 })
+      .eq('id', manualId)
+  }
   
   return log?.[0]?.id || 'unknown'
+}
+
+// ==========================================
+// GET DOWNLOAD URL (For download-center.html)
+// ==========================================
+export async function getManualDownloadUrl(manualId) {
+  const { data: manual, error } = await supabase
+    .from('manuals')
+    .select('file_path')
+    .eq('id', manualId)
+    .single()
+  
+  if (error || !manual?.file_path) {
+    throw new Error('Manual not found or no file attached')
+  }
+  
+  // Create signed URL (valid for 1 hour)
+  const { data: signedData, error: signError } = await supabase
+    .storage
+    .from('manuals')
+    .createSignedUrl(manual.file_path, 3600)
+  
+  if (signError) throw signError
+  
+  return signedData.signedUrl
 }
 
 function getSessionId() {
