@@ -51,88 +51,134 @@
   </form>
 
   <script type="module">
-    import { supabase } from './js/supabase.js'
-    
-    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-      e.preventDefault()
-      
-      const file = document.getElementById('fileInput').files[0]
-      if (!file) return alert('Please select a file')
-      
-      const btn = document.getElementById('uploadBtn')
-      const progressContainer = document.getElementById('progressContainer')
-      const progressBar = document.getElementById('progressBar')
-      const resultDiv = document.getElementById('result')
-      
-      btn.disabled = true
-      btn.textContent = 'Uploading...'
-      progressContainer.style.display = 'block'
-      
-      try {
-        // 1. Upload to Storage
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`
-        const filePath = `${document.getElementById('category').value}/${fileName}`
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('manuals')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false
-          })
-        
-        if (uploadError) throw uploadError
-        
-        progressBar.style.width = '50%'
-        
-        // 2. Add record to database
-        const { data: manualData, error: dbError } = await supabase
-          .from('manuals')
-          .insert({
-            title: document.getElementById('title').value,
-            category: document.getElementById('category').value,
-            equipment_type: document.getElementById('equipmentModel').value,
-            file_path: filePath,
-            file_size: formatFileSize(file.size),
-            version: '1.0',
-            status: 'active',
-            description: `Technical manual for ${document.getElementById('equipmentModel').value || 'equipment'}`
-          })
-          .select()
-        
-        if (dbError) throw dbError
-        
-        progressBar.style.width = '100%'
-        
-        resultDiv.style.display = 'block'
-        resultDiv.style.background = '#d1fae5'
-        resultDiv.style.color = '#065f46'
-        resultDiv.innerHTML = `
-          <strong>✅ Upload Successful!</strong><br>
-          File: ${fileName}<br>
-          Database ID: ${manualData[0].id}<br>
-          <a href="manuals.html" style="color: #1e40af;">View in Library</a>
-        `
-        
-      } catch (error) {
-        console.error('Upload error:', error)
-        resultDiv.style.display = 'block'
-        resultDiv.style.background = '#fee2e2'
-        resultDiv.style.color = '#991b1b'
-        resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`
-      } finally {
-        btn.disabled = false
-        btn.textContent = 'Upload to Storage'
+  import { supabase } from './js/supabase.js'
+  
+  // Check if bucket exists first
+  async function checkBucket() {
+    try {
+      const { data, error } = await supabase.storage.listBuckets()
+      if (error) {
+        console.error('Error listing buckets:', error)
+        return
       }
-    })
-    
-    function formatFileSize(bytes) {
-      if (bytes === 0) return '0 Bytes'
-      const k = 1024
-      const sizes = ['Bytes', 'KB', 'MB', 'GB']
-      const i = Math.floor(Math.log(bytes) / Math.log(k))
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+      console.log('Available buckets:', data.map(b => b.name))
+      
+      const manualsBucket = data.find(b => b.name === 'manuals')
+      if (!manualsBucket) {
+        alert('❌ ERROR: Bucket "manuals" does not exist!\n\nPlease create it in Supabase Dashboard:\nStorage → New Bucket → Name: manuals')
+      } else {
+        console.log('✅ Bucket "manuals" found:', manualsBucket)
+      }
+    } catch (e) {
+      console.error('Bucket check error:', e)
     }
-  </script>
+  }
+  
+  // Run check on load
+  checkBucket()
+  
+  document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    
+    const file = document.getElementById('fileInput').files[0]
+    const btn = document.getElementById('uploadBtn')
+    const resultDiv = document.getElementById('result')
+    
+    if (!file) {
+      alert('Please select a file')
+      return
+    }
+    
+    console.log('File selected:', file.name, 'Size:', file.size, 'Type:', file.type)
+    
+    btn.disabled = true
+    btn.textContent = 'Uploading...'
+    resultDiv.style.display = 'block'
+    resultDiv.style.background = '#dbeafe'
+    resultDiv.innerHTML = 'Starting upload...'
+    
+    try {
+      const fileExt = file.name.split('.').pop().toLowerCase()
+      if (fileExt !== 'pdf') {
+        throw new Error('File must be a PDF')
+      }
+      
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').toLowerCase()
+      const fileName = `${Date.now()}_${safeName}`
+      const category = document.getElementById('category').value
+      const filePath = `${category}/${fileName}`
+      
+      console.log('Uploading to:', `manuals/${filePath}`)
+      
+      // Step 1: Upload to Storage
+      resultDiv.innerHTML = 'Uploading to storage...'
+      
+      const { data: uploadData, error: uploadError } = await supabase
+        .storage
+        .from('manuals')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+      
+      if (uploadError) {
+        console.error('Storage error details:', uploadError)
+        throw new Error(`Storage error: ${uploadError.message || JSON.stringify(uploadError)}`)
+      }
+      
+      console.log('Storage upload success:', uploadData)
+      resultDiv.innerHTML = 'File uploaded. Saving to database...'
+      
+      // Step 2: Save to database
+      const { data: manualData, error: dbError } = await supabase
+        .from('manuals')
+        .insert({
+          title: document.getElementById('title').value,
+          category: category,
+          equipment_type: document.getElementById('equipmentModel').value,
+          file_path: filePath,
+          file_size: formatFileSize(file.size),
+          version: '1.0',
+          status: 'active'
+        })
+        .select()
+      
+      if (dbError) {
+        console.error('Database error:', dbError)
+        throw new Error(`Database error: ${dbError.message || JSON.stringify(dbError)}`)
+      }
+      
+      // Success
+      resultDiv.style.background = '#d1fae5'
+      resultDiv.style.color = '#065f46'
+      resultDiv.innerHTML = `
+        <strong>✅ Upload Successful!</strong><br>
+        File: ${fileName}<br>
+        Database ID: ${manualData[0].id}<br>
+        <a href="manuals.html" style="color: #1e40af; text-decoration: underline;">View in Library</a>
+      `
+      
+      document.getElementById('uploadForm').reset()
+      
+    } catch (error) {
+      console.error('Full error:', error)
+      resultDiv.style.background = '#fee2e2'
+      resultDiv.style.color = '#991b1b'
+      resultDiv.innerHTML = `<strong>❌ Error:</strong> ${error.message || error}`
+    } finally {
+      btn.disabled = false
+      btn.textContent = 'Upload to Storage'
+    }
+  })
+  
+  function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes'
+    const k = 1024
+    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+</script>
+
 </body>
 </html>
