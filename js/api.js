@@ -120,3 +120,27 @@ export async function getDownloadUrl(manualId) {
   
   return data.signedUrl
 }
+
+// Add to js/api.js
+export async function getDownloadUrl(manualId) {
+  const { data: manual } = await supabase
+    .from('manuals')
+    .select('file_path')
+    .eq('id', manualId)
+    .single()
+  
+  if (!manual?.file_path) return null
+  
+  const { data, error } = await supabase
+    .storage
+    .from('manuals')
+    .createSignedUrl(manual.file_path, 3600) // 1 hour expiry
+  
+  if (error) {
+    console.error('Error creating signed URL:', error)
+    return null
+  }
+  
+  return data.signedUrl
+}
+
