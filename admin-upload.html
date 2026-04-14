@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Upload Manual - Admin</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    input, select { width: 100%; padding: 8px; margin-bottom: 10px; }
+    button { background: #1e40af; color: white; padding: 12px; border: none; cursor: pointer; width: 100%; }
+    .progress { width: 100%; height: 20px; background: #e5e7eb; margin-top: 10px; display: none; }
+    .progress-bar { height: 100%; background: #10b981; width: 0%; transition: width 0.3s; }
+  </style>
+</head>
+<body>
+  <h2>📤 Upload Technical Manual</h2>
+  
+  <form id="uploadForm">
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" id="title" required placeholder="e.g., Carrier Chiller Operation Manual">
+    </div>
+    
+    <div class="form-group">
+      <label>Category</label>
+      <select id="category" required>
+        <option value="electrical">Electrical</option>
+        <option value="mechanical">Mechanical</option>
+        <option value="hvac">HVAC</option>
+        <option value="safety">Safety</option>
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label>Equipment Model</label>
+      <input type="text" id="equipmentModel" placeholder="e.g., Carrier 30XA">
+    </div>
+    
+    <div class="form-group">
+      <label>Select PDF File</label>
+      <input type="file" id="fileInput" accept=".pdf" required>
+    </div>
+    
+    <button type="submit" id="uploadBtn">Upload to Storage</button>
+    
+    <div class="progress" id="progressContainer">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    
+    <div id="result" style="margin-top: 20px; padding: 10px; display: none;"></div>
+  </form>
+
+  <script type="module">
+    import { supabase } from './js/supabase.js'
+    
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      
+      const file = document.getElementById('fileInput').files[0]
+      if (!file) return alert('Please select a file')
+      
+      const btn = document.getElementById('uploadBtn')
+      const progressContainer = document.getElementById('progressContainer')
+      const progressBar = document.getElementById('progressBar')
+      const resultDiv = document.getElementById('result')
+      
+      btn.disabled = true
+      btn.textContent = 'Uploading...'
+      progressContainer.style.display = 'block'
+      
+      try {
+        // 1. Upload to Storage
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`
+        const filePath = `${document.getElementById('category').value}/${fileName}`
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('manuals')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          })
+        
+        if (uploadError) throw uploadError
+        
+        progressBar.style.width = '50%'
+        
+        // 2. Add record to database
+        const { data: manualData, error: dbError } = await supabase
+          .from('manuals')
+          .insert({
+            title: document.getElementById('title').value,
+            category: document.getElementById('category').value,
+            equipment_type: document.getElementById('equipmentModel').value,
+            file_path: filePath,
+            file_size: formatFileSize(file.size),
+            version: '1.0',
+            status: 'active',
+            description: `Technical manual for ${document.getElementById('equipmentModel').value || 'equipment'}`
+          })
+          .select()
+        
+        if (dbError) throw dbError
+        
+        progressBar.style.width = '100%'
+        
+        resultDiv.style.display = 'block'
+        resultDiv.style.background = '#d1fae5'
+        resultDiv.style.color = '#065f46'
+        resultDiv.innerHTML = `
+          <strong>✅ Upload Successful!</strong><br>
+          File: ${fileName}<br>
+          Database ID: ${manualData[0].id}<br>
+          <a href="manuals.html" style="color: #1e40af;">View in Library</a>
+        `
+        
+      } catch (error) {
+        console.error('Upload error:', error)
+        resultDiv.style.display = 'block'
+        resultDiv.style.background = '#fee2e2'
+        resultDiv.style.color = '#991b1b'
+        resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`
+      } finally {
+        btn.disabled = false
+        btn.textContent = 'Upload to Storage'
+      }
+    })
+    
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes'
+      const k = 1024
+      const sizes = ['Bytes', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    }
+  </script>
+</body>
+</html>
